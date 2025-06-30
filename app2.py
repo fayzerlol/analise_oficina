@@ -4,22 +4,40 @@ import plotly.express as px
 import numpy as np
 from datetime import datetime, timedelta
 import io
+import base64
 
 st.set_page_config(page_title="BI Ampolas & Tanques", page_icon="🏭", layout="wide", initial_sidebar_state="expanded")
 
+# CSS para estilos e logo
 st.markdown("""
     <style>
-    .main-header {font-size: 2.2rem !important; font-weight: 900; text-align: center; margin: 2rem 0 1.5rem 0;
-        background: linear-gradient(90deg,#667eea,#764ba2 60%,#f093fb 100%);
+    .main-header {font-size: 2.2rem !important; font-weight: 900; text-align: center; margin: 1.2rem 0 0.7rem 0;
+        background: linear-gradient(90deg,#ffd600 0%,#ffe066 50%,#fff5cc 100%);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
-    .metric-container {background: #fff; border-radius: 18px; box-shadow: 0 4px 24px #eee; padding: 1.5rem 0.7rem 1rem;}
-    .section-header {font-size: 1.5rem; font-weight: 700; color: #4f46e5; margin: 2.5rem 0 1.2rem 0;}
-    .footer {text-align: center; color: #64748b; margin: 2rem 0 1rem 0;}
+    .metric-container {background: #fffbe7; border-radius: 18px; box-shadow: 0 3px 24px #f7e09860; padding: 1.4rem 0.6rem 1rem;}
+    .section-header {font-size: 1.3rem; font-weight: 700; color: #f4a100; margin: 2.3rem 0 1.2rem 0; letter-spacing:1px;}
+    .footer {text-align: center; color: #9e8b36; margin: 2rem 0 1rem 0;}
+    .logo-header {display: flex; justify-content: center; align-items: center; margin-top:1.5rem; margin-bottom:0.3rem;}
+    .stDownloadButton button {background: #f4a100 !important; color: white !important; border-radius: 10px;}
+    .stDownloadButton button:hover {background: #ffd600 !important; color: #454545 !important;}
+    .st-emotion-cache-1wivap2 {background: #fffbe7;}
+    .css-1v0mbdj, .st-emotion-cache-10trblm {color:#555 !important;}
     </style>
 """, unsafe_allow_html=True)
 
+# LOGO CENTRALIZADA
+def show_logo(file_path):
+    with open(file_path, "rb") as image_file:
+        encoded = base64.b64encode(image_file.read()).decode()
+        st.markdown(
+            f'<div class="logo-header"><img src="data:image/png;base64,{encoded}" height="85"></div>',
+            unsafe_allow_html=True
+        )
+
+show_logo("logo.png")
+
 st.markdown('<h1 class="main-header">BI Ampolas & Tanques - Grupo Franzen</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; color: #475569;">Dashboard de processos, laudos, riscos, TH, drilldown e exportação avançada</p>', unsafe_allow_html=True)
+st.markdown('<p style="text-align: center; color: #F4A100;">Dashboard visual de processos, laudos, riscos, TH e exportação avançada</p>', unsafe_allow_html=True)
 
 arquivo = st.file_uploader("Selecione o arquivo Excel (.xlsx) com as abas brutas", type=["xlsx"])
 
@@ -164,7 +182,6 @@ if arquivo:
 
     data_col = 'data_inicio'
 
-    # === GERA CHAVES CLIENTE (SEM FILTRO DE ETAPA) ===
     if cliente != "Todos":
         chaves_cliente = set(df[(df['tipo_item'] == tipo_nome) & (df['etapa'] == 'Orçamento') & (df['cliente'] == cliente)]['chave_item'])
     else:
@@ -210,7 +227,6 @@ if arquivo:
     else:
         st.sidebar.info("Sem datas de início válidas para filtrar o período.")
 
-    # === CRÍTICOS e TH === (mantém igual ao seu bloco anterior)
     aba_th = "th_A"
     if aba_th in xl.sheet_names:
         df_th = xl.parse(aba_th)
@@ -253,56 +269,43 @@ if arquivo:
             })
     df_criticos = pd.DataFrame(criticos)
 
-    # Filtros de críticos etc...
+    # CRÍTICOS e % críticos
+    orcados = len(set(df_tipo_filt[df_tipo_filt['etapa'] == 'Orçamento']['chave_item']))
+    pct_criticos = (len(df_criticos) / orcados) * 100 if orcados > 0 else 0
+    k6, k7 = st.columns([2,3])
+    k6.metric("% de Críticos", f"{pct_criticos:.1f}%")
+    if not df_criticos.empty:
+        vencendo = df_criticos[df_criticos['tipo_critico'].str.contains('quase', case=False, na=False)]
+        if not vencendo.empty:
+            n_criticos = len(vencendo)
+            dias_min = vencendo['dias_vencido'].min() if 'dias_vencido' in vencendo else None
+            k7.warning(f"⚠️ {n_criticos} itens vão vencer TH em até 1,5 anos! Mais próximo: {dias_min} dias", icon="⚠️")
 
-    # --- KPIs e FUNIL sempre SEM FILTRO DE ETAPA (corrigido!)
-    df_funil = pd.concat([df_tipo_orc, df_tipo_outras])  # sempre sem filtro de etapa aqui!
-
+    # FUNIL (agora sempre usando todas as etapas, não depende do filtro de etapa)
+    df_funil = pd.concat([df_tipo_orc, df_tipo_outras])
     etapas_kpi = ['Orçamento', 'Recarga', 'Finalização']
-    kpi_counts = {}
-    for etapa_ in etapas_kpi:
-        chaves_etapa = set(df_funil[df_funil['etapa'] == etapa_]['chave_item'])
-        chaves_cruzadas = chaves_etapa & chaves_cliente
-        kpi_counts[etapa_] = len(chaves_cruzadas)
-
-    orcados = kpi_counts['Orçamento']
-    recarregados = kpi_counts['Recarga']
-    finalizados = kpi_counts['Finalização']
-    total = orcados
-    pendencias = 0
-
-    st.markdown(f'<h2 class="section-header">{painel_idx}</h2>', unsafe_allow_html=True)
-    k1, k2, k3, k4, k5 = st.columns(5)
-    k1.markdown(f"""<div class="metric-container"><div class="metric-title">Total</div><div class="metric-value">{total}</div></div>""", unsafe_allow_html=True)
-    k2.markdown(f"""<div class="metric-container"><div class="metric-title">Orçados</div><div class="metric-value">{orcados}</div></div>""", unsafe_allow_html=True)
-    k3.markdown(f"""<div class="metric-container"><div class="metric-title">Recarregados</div><div class="metric-value">{recarregados}</div></div>""", unsafe_allow_html=True)
-    k4.markdown(f"""<div class="metric-container"><div class="metric-title">Finalizados</div><div class="metric-value">{finalizados}</div></div>""", unsafe_allow_html=True)
-    k5.markdown(f"""<div class="metric-container"><div class="metric-title">Pendências</div><div class="metric-value">{pendencias}</div></div>""", unsafe_allow_html=True)
-
-    # --- FUNIL correto ---
-    st.markdown("### Fluxo de Itens (Funil Real por Chave Única)")
+    funil_colors = ["#2456f0", "#21c1f3", "#f4a100"]
     funil_counts = {}
     for etapa_ in etapas_kpi:
         chaves_etapa = set(df_funil[df_funil['etapa'] == etapa_]['chave_item'])
         chaves_cruzadas = chaves_etapa & chaves_cliente
         funil_counts[etapa_] = len(chaves_cruzadas)
     funil_plot = pd.DataFrame({'Etapa': etapas_kpi, 'Qtd': [funil_counts[e] for e in etapas_kpi]})
-    st.download_button(
-        label=f"Baixar funil (CSV)",
-        data=funil_plot.to_csv(index=False),
-        file_name=f"{painel_idx.lower()}_funil.csv",
-        mime="text/csv"
-    )
-    st.download_button(
-        label=f"Baixar funil (Excel)",
-        data=to_excel(funil_plot),
-        file_name=f"{painel_idx.lower()}_funil.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-    fig_funil = px.bar(funil_plot, x='Etapa', y='Qtd', text_auto=True, color='Etapa', title='Funil do Processo - Itens Únicos')
+    st.markdown(f'<h2 class="section-header">{painel_idx}</h2>', unsafe_allow_html=True)
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.markdown(f"""<div class="metric-container"><div class="metric-title">Total</div><div class="metric-value">{funil_counts['Orçamento']}</div></div>""", unsafe_allow_html=True)
+    k2.markdown(f"""<div class="metric-container"><div class="metric-title">Orçados</div><div class="metric-value">{funil_counts['Orçamento']}</div></div>""", unsafe_allow_html=True)
+    k3.markdown(f"""<div class="metric-container"><div class="metric-title">Recarregados</div><div class="metric-value">{funil_counts['Recarga']}</div></div>""", unsafe_allow_html=True)
+    k4.markdown(f"""<div class="metric-container"><div class="metric-title">Finalizados</div><div class="metric-value">{funil_counts['Finalização']}</div></div>""", unsafe_allow_html=True)
+    k5.markdown(f"""<div class="metric-container"><div class="metric-title">Pendências</div><div class="metric-value">0</div></div>""", unsafe_allow_html=True)
+    st.markdown("### Fluxo de Itens (Funil Real por Chave Única)")
+    fig_funil = px.bar(funil_plot, x='Etapa', y='Qtd', text_auto=True, color='Etapa', title='Funil do Processo - Itens Únicos',
+                       color_discrete_sequence=funil_colors)
+    fig_funil.update_layout(font=dict(family="Inter, Arial, sans-serif", size=16, color="#444"),
+                           plot_bgcolor='#fffbe7', paper_bgcolor='#fffbe7')
     st.plotly_chart(fig_funil, use_container_width=True)
-    
-    # --- SANKEY FLOW (FLUXO ENTRE ETAPAS) ---
+
+    # Sankey
     st.markdown("### Fluxo Sankey entre Etapas")
     etapas_sankey = ['Orçamento', 'Recarga', 'Finalização']
     df_sankey = df_tipo_filt[df_tipo_filt['etapa'].isin(etapas_sankey)].copy()
@@ -331,14 +334,14 @@ if arquivo:
     else:
         st.info("Não há fluxo suficiente entre etapas para gerar o Sankey.")
 
-    # --- TOP CLIENTES ---
+    # TOP CLIENTES
     st.markdown("### Top 10 Clientes")
     if 'cliente' in df_tipo_filt.columns and not df_tipo_filt['cliente'].isna().all():
         top_cli = df_tipo_filt[df_tipo_filt['cliente'].notna() & (df_tipo_filt['cliente'] != '')]['cliente'].value_counts().head(10).reset_index()
         top_cli.columns = ['Cliente', 'Qtd']
         if not top_cli.empty:
             st.download_button(
-                label="Baixar top 10 clientes (Excel/CSV)",
+                label="Baixar top 10 clientes (CSV)",
                 data=top_cli.to_csv(index=False),
                 file_name=f"{painel_idx.lower()}_top_clientes.csv",
                 mime="text/csv"
@@ -349,14 +352,17 @@ if arquivo:
                 file_name=f"{painel_idx.lower()}_top_clientes.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-            fig_cli = px.bar(top_cli, x="Cliente", y="Qtd", title="Top 10 Clientes", text_auto=True)
+            fig_cli = px.bar(top_cli, x="Cliente", y="Qtd", title="Top 10 Clientes", text_auto=True,
+                             color_discrete_sequence=["#2456f0"])
+            fig_cli.update_layout(font=dict(family="Inter, Arial, sans-serif", size=16, color="#444"),
+                                 plot_bgcolor='#fffbe7', paper_bgcolor='#fffbe7')
             st.plotly_chart(fig_cli, use_container_width=True)
         else:
             st.info("Sem dados de cliente para exibir.")
     else:
         st.info("Coluna de cliente não encontrada.")
 
-    # --- LAUDOS (pizza agrupada) ---
+    # LAUDOS (pizza)
     st.markdown("### Distribuição dos Laudos Técnicos")
     if 'laudo_tecnico' in df_tipo_filt.columns and not df_tipo_filt['laudo_tecnico'].isna().all():
         df_tipo_filt = agrupar_outros(df_tipo_filt, 'laudo_tecnico', top=7)
@@ -364,7 +370,7 @@ if arquivo:
         laudo_agrupado.columns = ['Laudo', 'Qtd']
         if not laudo_agrupado.empty:
             st.download_button(
-                label="Baixar laudos (Excel/CSV)",
+                label="Baixar laudos (CSV)",
                 data=laudo_agrupado.to_csv(index=False),
                 file_name=f"{painel_idx.lower()}_laudos.csv",
                 mime="text/csv"
@@ -375,19 +381,21 @@ if arquivo:
                 file_name=f"{painel_idx.lower()}_laudos.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-            fig_laudo = px.pie(laudo_agrupado, names="Laudo", values="Qtd", title="Laudos Técnicos (Top 7 + Outros)")
+            fig_laudo = px.pie(laudo_agrupado, names="Laudo", values="Qtd", title="Laudos Técnicos (Top 7 + Outros)",
+                               color_discrete_sequence=px.colors.qualitative.Pastel)
+            fig_laudo.update_layout(font=dict(family="Inter, Arial, sans-serif", size=15, color="#444"))
             st.plotly_chart(fig_laudo, use_container_width=True)
         else:
             st.info("Sem dados de laudo técnico para exibir.")
     else:
         st.info("Coluna de laudo técnico não encontrada.")
 
-    # --- TIMELINE (datas de início) ---
+    # TIMELINE
     st.markdown("### Evolução dos Eventos no Tempo (Data de Início)")
     if 'data_inicio' in df_tipo_filt.columns and not df_tipo_filt['data_inicio'].isna().all():
         if df_tipo_filt['data_inicio'].notna().any():
             st.download_button(
-                label="Baixar datas de início (Excel/CSV)",
+                label="Baixar datas de início (CSV)",
                 data=df_tipo_filt[['data_inicio', 'etapa']].dropna().to_csv(index=False),
                 file_name=f"{painel_idx.lower()}_datas_inicio.csv",
                 mime="text/csv"
@@ -398,20 +406,22 @@ if arquivo:
                 file_name=f"{painel_idx.lower()}_datas_inicio.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-            fig_time = px.histogram(df_tipo_filt, x='data_inicio', color="etapa", title="Evolução dos Eventos (Data de Início)")
+            fig_time = px.histogram(df_tipo_filt, x='data_inicio', color="etapa", title="Evolução dos Eventos (Data de Início)",
+                                    color_discrete_sequence=funil_colors)
+            fig_time.update_layout(font=dict(family="Inter, Arial, sans-serif", size=14, color="#444"))
             st.plotly_chart(fig_time, use_container_width=True)
         else:
             st.info("Sem dados de datas de início para exibir.")
     else:
         st.info("Coluna de data de início não encontrada.")
 
-    # --- DUPLICIDADES ---
+    # DUPLICIDADES
     st.markdown("### Duplicidades (mesma chave e etapa)")
     if 'chave_item' in df_tipo_filt.columns:
         duplicados = df_tipo_filt[df_tipo_filt.duplicated(['chave_item', 'etapa'], keep=False)].sort_values(['chave_item', 'etapa'])
         if not duplicados.empty:
             st.download_button(
-                label="Baixar duplicados (Excel/CSV)",
+                label="Baixar duplicados (CSV)",
                 data=duplicados.to_csv(index=False),
                 file_name=f"{painel_idx.lower()}_duplicados.csv",
                 mime="text/csv"
