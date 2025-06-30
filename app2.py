@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import numpy as np
+from datetime import datetime, timedelta
 
 st.set_page_config(page_title="BI Ampolas & Tanques", page_icon="🏭", layout="wide", initial_sidebar_state="expanded")
 
@@ -16,7 +18,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<h1 class="main-header">BI Ampolas & Tanques - Grupo Franzen</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; color: #475569;">Dashboard de processos, laudos, riscos e filtros avançados</p>', unsafe_allow_html=True)
+st.markdown('<p style="text-align: center; color: #475569;">Dashboard de processos, laudos, riscos, TH e filtros avançados</p>', unsafe_allow_html=True)
 
 arquivo = st.file_uploader("Selecione o arquivo Excel (.xlsx) com as abas brutas", type=["xlsx"])
 
@@ -91,7 +93,6 @@ if arquivo:
                   'cliente': '', 'laudo_tecnico': 'Laudo/Observação', 'status_th': 'Teste Hidrostático Realizado?',
                   'data_th': 'Data Fabricação / Teste Hidrostático', 'data_inicio': 'Início:'}},
     ]
-
     for meta in mapeamento:
         aba = meta['aba']
         if aba in xl.sheet_names:
@@ -240,40 +241,106 @@ if arquivo:
 
     # --- SANKEY FLOW (FLUXO ENTRE ETAPAS) ---
     st.markdown("### Fluxo Sankey entre Etapas")
-
-    # Pega as etapas possíveis (Orçamento, Recarga, Finalização)
     etapas_sankey = ['Orçamento', 'Recarga', 'Finalização']
     df_sankey = df_tipo_filt[df_tipo_filt['etapa'].isin(etapas_sankey)].copy()
-
-    # Para cada chave única, qual caminho ela percorreu?
     paths = df_sankey.groupby('chave_item')['etapa'].apply(list)
-
     sankey_data = []
-    for etapas in paths:
-        etapas = [e for e in etapas_sankey if e in etapas]  # Garante ordem
-        if len(etapas) >= 2:
-            for i in range(len(etapas)-1):
-                sankey_data.append((etapas[i], etapas[i+1]))
-
+    for etapas_ in paths:
+        etapas_ = [e for e in etapas_sankey if e in etapas_]
+        if len(etapas_) >= 2:
+            for i in range(len(etapas_)-1):
+                sankey_data.append((etapas_[i], etapas_[i+1]))
     if sankey_data:
         sankey_df = pd.DataFrame(sankey_data, columns=['source', 'target'])
         sankey_counts = sankey_df.value_counts().reset_index(name='count')
-
         import plotly.graph_objects as go
         labels = etapas_sankey
         label_idx = {l: i for i, l in enumerate(labels)}
         sources = [label_idx[row['source']] for _, row in sankey_counts.iterrows()]
         targets = [label_idx[row['target']] for _, row in sankey_counts.iterrows()]
         values = sankey_counts['count'].tolist()
-
         fig_sankey = go.Figure(go.Sankey(
-            node=dict(label=labels, pad=30, thickness=20, color="blue"),
+            node=dict(label=labels, pad=30, thickness=20, color=["#2456f0","#21c1f3","#e94d5a"]),
             link=dict(source=sources, target=targets, value=values)
         ))
         fig_sankey.update_layout(title_text="Fluxo de Itens entre Etapas (Sankey)", font_size=14)
         st.plotly_chart(fig_sankey, use_container_width=True)
     else:
         st.info("Não há fluxo suficiente entre etapas para gerar o Sankey.")
+
+    # --- CRÍTICOS (mapa de risco) e TH --- #
+    st.markdown("### Itens Críticos / Risco (TH)")
+    # 1. Carrega aba de TH se existir
+    aba_th = "th_A"
+    if aba_th in xl.sheet_names:
+        df_th = xl.parse(aba_th)
+        df_th['nota_fiscal'] = df_th['Número da Nota Fiscal'].apply(padroniza_chave)
+        df_th['numero_serie'] = df_th['Número de Série'].apply(padroniza_chave)
+        df_th['chave_item'] = df_th.apply(lambda row: monta_chave(row, chave_selecionada), axis=1)
+        df_th['data_inicio'] = pd.to_datetime(df_th['Início:'], errors='coerce')
+    else:
+        df_th = pd.DataFrame()
+    criticos = []
+    hoje = pd.Timestamp.now().normalize()
+    anos10 = timedelta(days=365.25*10)
+    anos85 = timedelta(days=365.25*8.5)
+    for idx, row in df_tipo_filt.iterrows():
+        critico = None
+        chave = row['chave_item']
+        etapa = row['etapa']
+        status_th = str(row.get('status_th', '')).lower()
+        data_th = pd.to_datetime(row.get('data_th'), errors='coerce')
+        data_inicio = pd.to_datetime(row.get('data_inicio'), errors='coerce')
+        # Orçamento: necessário TH mas não tem recarga nem TH associado
+        if etapa == 'Orçamento' and 'sim' in status_th:
+            th_feito = False
+            recarga = df_tipo_filt[(df_tipo_filt['chave_item'] == chave) & (df_tipo_filt['etapa'] == 'Recarga')]
+            th_row = df_th[df_th['chave_item'] == chave] if not df_th.empty else pd.DataFrame()
+            if (recarga.empty or recarga['status_th'].str.lower().str.contains('não').any()) and th_row.empty:
+                critico = 'TH não realizado'
+        # Recarga: verifica data do TH
+        if etapa == 'Recarga':
+            ref = data_th if not pd.isnull(data_th) else data_inicio
+            if ref is not None and not pd.isnull(ref):
+                vencimento = hoje - ref
+                if vencimento > anos10:
+                    critico = 'TH vencido'
+                elif vencimento > anos85:
+                    critico = 'TH quase vencido'
+        if critico:
+            criticos.append({
+                **row,
+                "tipo_critico": critico,
+                "dias_vencido": (hoje - ref).days if etapa == 'Recarga' else None
+            })
+    df_criticos = pd.DataFrame(criticos)
+    if not df_criticos.empty:
+        st.dataframe(df_criticos, use_container_width=True)
+        st.download_button(
+            label="Baixar lista de críticos (Excel/CSV)",
+            data=df_criticos.to_csv(index=False),
+            file_name=f"{painel_idx.lower()}_itens_criticos.csv",
+            mime="text/csv"
+        )
+        # Timeline dos críticos
+        st.markdown("#### Timeline dos Itens Críticos (TH)")
+        df_criticos['data_ref'] = df_criticos['data_th'].combine_first(df_criticos['data_inicio'])
+        fig_crit_timeline = px.histogram(
+            df_criticos, x='data_ref', color='tipo_critico', title="Evolução dos Críticos no Tempo (TH)",
+            nbins=25, labels={'data_ref': 'Data Referência'}, opacity=0.85
+        )
+        st.plotly_chart(fig_crit_timeline, use_container_width=True)
+        # Ranking
+        st.markdown("#### Ranking de Clientes com mais Itens Críticos")
+        if 'cliente' in df_criticos.columns and not df_criticos['cliente'].isna().all():
+            rank = df_criticos['cliente'].value_counts().reset_index()
+            rank.columns = ['Cliente', 'Qtd Críticos']
+            fig_rank = px.bar(rank.head(10), x='Cliente', y='Qtd Críticos', title='Top 10 Clientes Críticos', text_auto=True)
+            st.plotly_chart(fig_rank, use_container_width=True)
+        else:
+            st.info("Não há clientes críticos identificados nesse filtro.")
+    else:
+        st.info("Nenhum item crítico de TH detectado nos filtros atuais.")
 
     # --- TOP CLIENTES ---
     st.markdown("### Top 10 Clientes")
@@ -317,7 +384,6 @@ if arquivo:
     # --- TIMELINE (datas de início) ---
     st.markdown("### Evolução dos Eventos no Tempo (Data de Início)")
     if 'data_inicio' in df_tipo_filt.columns and not df_tipo_filt['data_inicio'].isna().all():
-        # df_tipo_filt['data_inicio'] já está convertido no filtro acima!
         if df_tipo_filt['data_inicio'].notna().any():
             st.download_button(
                 label="Baixar datas de início (Excel/CSV)",
@@ -331,23 +397,6 @@ if arquivo:
             st.info("Sem dados de datas de início para exibir.")
     else:
         st.info("Coluna de data de início não encontrada.")
-
-    # --- CRÍTICOS (mapa de risco) ---
-    st.markdown("### Itens Críticos / Risco")
-    if 'status_th' in df_tipo_filt.columns:
-        criticos = df_tipo_filt[df_tipo_filt['status_th'].str.lower().isin(['crítico','vencido'])]
-        if not criticos.empty:
-            st.download_button(
-                label="Baixar itens críticos (Excel/CSV)",
-                data=criticos.to_csv(index=False),
-                file_name=f"{painel_idx.lower()}_itens_criticos.csv",
-                mime="text/csv"
-            )
-            st.dataframe(criticos, use_container_width=True)
-        else:
-            st.info("Nenhum item crítico encontrado para o filtro.")
-    else:
-        st.info("Coluna status_th não encontrada.")
 
     # --- DUPLICIDADES ---
     st.markdown("### Duplicidades (mesma chave e etapa)")
