@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import numpy as np
 from datetime import datetime, timedelta
+import io
 
 st.set_page_config(page_title="BI Ampolas & Tanques", page_icon="🏭", layout="wide", initial_sidebar_state="expanded")
 
@@ -18,7 +19,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<h1 class="main-header">BI Ampolas & Tanques - Grupo Franzen</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; color: #475569;">Dashboard de processos, laudos, riscos, TH e filtros avançados</p>', unsafe_allow_html=True)
+st.markdown('<p style="text-align: center; color: #475569;">Dashboard de processos, laudos, riscos, TH, drilldown e exportação avançada</p>', unsafe_allow_html=True)
 
 arquivo = st.file_uploader("Selecione o arquivo Excel (.xlsx) com as abas brutas", type=["xlsx"])
 
@@ -54,11 +55,15 @@ def agrupar_outros(df, coluna, top=7):
     df[coluna + '_agrup'] = df[coluna].where(df[coluna].isin(top_cats), 'Outros')
     return df
 
+def to_excel(df):
+    out = io.BytesIO()
+    df.to_excel(out, index=False, engine='openpyxl')
+    return out.getvalue()
+
 if arquivo:
     xl = pd.ExcelFile(arquivo)
     frames = []
     mapeamento = [
-        # Ampolas
         {'aba': 'orc_A', 'tipo_item': 'Ampola', 'etapa': 'Orçamento',
          'mapa': {'nota_fiscal': 'Nota Fiscal', 'numero_serie': 'Número de Série', 'numero_lacre': 'Número do Lacre',
                   'cliente': 'Cliente', 'laudo_tecnico': 'Análise Técnica:',
@@ -71,7 +76,6 @@ if arquivo:
         {'aba': 'fin_A', 'tipo_item': 'Ampola', 'etapa': 'Finalização',
          'mapa': {'nota_fiscal': 'Número da Nota Fiscal', 'numero_serie': 'Número de Série', 'numero_lacre': 'Número do Lacre',
                   'cliente': '', 'laudo_tecnico': 'Laudo.', 'status_th': '', 'data_th': '', 'data_inicio': 'Início:'}},
-        # Tanques pressurizados
         {'aba': 'orc_T_P', 'tipo_item': 'Tanque Pressurizado', 'etapa': 'Orçamento',
          'mapa': {'nota_fiscal': 'Nº Nota Fiscal', 'numero_serie': 'Número de Série', 'numero_lacre': 'Número do Lacre',
                   'cliente': 'Cliente', 'laudo_tecnico': 'Laudo', 'status_th': 'Necessário Teste Hidrostático?',
@@ -83,7 +87,6 @@ if arquivo:
         {'aba': 'fin_T_P', 'tipo_item': 'Tanque Pressurizado', 'etapa': 'Finalização',
          'mapa': {'nota_fiscal': 'Número da Nota Fiscal', 'numero_serie': 'Número de Série', 'numero_lacre': 'Número do Lacre',
                   'cliente': '', 'laudo_tecnico': 'Laudo.', 'status_th': '', 'data_th': '', 'data_inicio': 'Início:'}},
-        # Tanques sem pressão
         {'aba': 'orc_T_S', 'tipo_item': 'Tanque Sem Pressão', 'etapa': 'Orçamento',
          'mapa': {'nota_fiscal': 'Nota Fiscal', 'numero_serie': 'Número de Série', 'numero_lacre': 'Número do Lacre',
                   'cliente': 'Cliente', 'laudo_tecnico': 'Análise Técnica:', 'status_th': 'Necessário Teste Hidrostático?',
@@ -93,6 +96,7 @@ if arquivo:
                   'cliente': '', 'laudo_tecnico': 'Laudo/Observação', 'status_th': 'Teste Hidrostático Realizado?',
                   'data_th': 'Data Fabricação / Teste Hidrostático', 'data_inicio': 'Início:'}},
     ]
+
     for meta in mapeamento:
         aba = meta['aba']
         if aba in xl.sheet_names:
@@ -133,19 +137,16 @@ if arquivo:
 
     df['chave_item'] = df.apply(lambda row: monta_chave(row, chave_selecionada), axis=1)
 
-    # --- Navegação dinâmica: só um painel por vez, sidebar e gráficos sincronizados ---
     painel_titulos = ["Ampolas", "Tanque Pressurizado", "Tanque Sem Pressão"]
     painel_opcoes = ["Ampola", "Tanque Pressurizado", "Tanque Sem Pressão"]
     painel_idx = st.sidebar.radio("Escolha o painel", painel_titulos, index=0)
     tipo_nome = painel_opcoes[painel_titulos.index(painel_idx)]
     df_tipo = df[df['tipo_item'] == tipo_nome].copy()
 
-    # --- Filtros dinâmicos: só para o painel ativo ---
     st.sidebar.markdown(f"#### Filtros para {painel_idx}")
     clientes = sorted([c for c in df_tipo[df_tipo['etapa'] == 'Orçamento']['cliente'].unique() if c and c.lower() != 'nan']) if 'cliente' in df_tipo.columns else []
     cliente = st.sidebar.selectbox(f"Cliente ({painel_idx}):", ["Todos"] + clientes)
 
-    # NOTA FISCAL dependente do CLIENTE!
     if cliente != "Todos":
         notas = sorted([n for n in df_tipo[(df_tipo['etapa'] == 'Orçamento') & (df_tipo['cliente'] == cliente)]['nota_fiscal'].unique() if n and n.lower() != 'nan'])
     else:
@@ -155,37 +156,41 @@ if arquivo:
     etapas = sorted(df_tipo['etapa'].unique()) if 'etapa' in df_tipo.columns else []
     etapa = st.sidebar.multiselect(f"Etapa ({painel_idx}):", etapas, default=etapas)
 
-    # === Filtro de período (intervalo de datas de início) ===
+    st.sidebar.markdown("#### Busca rápida (texto livre)")
+    busca_txt = st.sidebar.text_input(
+        "Filtrar por cliente, nota, laudo, análise técnica, etc.",
+        value="", placeholder="Digite parte do texto..."
+    )
+
     data_col = 'data_inicio'
 
-    # === 1. Identifica as chaves do orçamento do cliente selecionado (NO DF COMPLETO) ===
     if cliente != "Todos":
         chaves_cliente = set(df[(df['tipo_item'] == tipo_nome) & (df['etapa'] == 'Orçamento') & (df['cliente'] == cliente)]['chave_item'])
     else:
         chaves_cliente = set(df[(df['tipo_item'] == tipo_nome) & (df['etapa'] == 'Orçamento')]['chave_item'])
 
-    # === 2. Filtra o dataframe do painel:
-    # (a) Orçamento: só linhas que são do cliente (se filtrando cliente), nota, etapa, data.
-    # (b) Recarga/finalização: só linhas cuja chave está nas chaves_cliente (não pelo campo cliente!)
-
-    # ORÇAMENTO (só do cliente), OUTRAS ETAPAS filtradas só pelas chaves do orçamento
     if cliente != "Todos":
         df_tipo_orc = df_tipo[(df_tipo['etapa'] == 'Orçamento') & (df_tipo['cliente'] == cliente)].copy()
     else:
         df_tipo_orc = df_tipo[df_tipo['etapa'] == 'Orçamento'].copy()
     df_tipo_outras = df_tipo[df_tipo['etapa'] != 'Orçamento'].copy()
     df_tipo_outras = df_tipo_outras[df_tipo_outras['chave_item'].isin(chaves_cliente)]
-
-    # Junta tudo para aplicar filtros de nota, etapa e datas (painel inteiro, mas as outras etapas só mostram o que tem no orçamento daquele cliente)
     df_tipo_filt = pd.concat([df_tipo_orc, df_tipo_outras])
 
-    # Agora filtra por nota, etapa, datas:
     if nota != "Todas" and 'nota_fiscal' in df_tipo_filt.columns:
         df_tipo_filt = df_tipo_filt[df_tipo_filt['nota_fiscal'] == nota]
     if etapa and 'etapa' in df_tipo_filt.columns:
         df_tipo_filt = df_tipo_filt[df_tipo_filt['etapa'].isin(etapa)]
 
-    # Filtro por período (Data de Início)
+    if busca_txt.strip():
+        busca_txt_low = busca_txt.lower()
+        campos_busca = ['cliente', 'nota_fiscal', 'laudo_tecnico', 'status_th', 'data_th', 'data_inicio']
+        mask = np.zeros(len(df_tipo_filt), dtype=bool)
+        for campo in campos_busca:
+            if campo in df_tipo_filt.columns:
+                mask |= df_tipo_filt[campo].astype(str).str.lower().str.contains(busca_txt_low)
+        df_tipo_filt = df_tipo_filt[mask]
+
     df_tipo_filt[data_col] = pd.to_datetime(df_tipo_filt[data_col], errors="coerce")
     datas_validas = df_tipo_filt[data_col].dropna()
     if not datas_validas.empty:
@@ -204,7 +209,104 @@ if arquivo:
     else:
         st.sidebar.info("Sem datas de início válidas para filtrar o período.")
 
-    # KPIs e Funil: sempre com as chaves do orçamento do cliente
+    # === CRÍTICOS e TH ===
+    aba_th = "th_A"
+    if aba_th in xl.sheet_names:
+        df_th = xl.parse(aba_th)
+        df_th['nota_fiscal'] = df_th['Número da Nota Fiscal'].apply(padroniza_chave)
+        df_th['numero_serie'] = df_th['Número de Série'].apply(padroniza_chave)
+        df_th['chave_item'] = df_th.apply(lambda row: monta_chave(row, chave_selecionada), axis=1)
+        df_th['data_inicio'] = pd.to_datetime(df_th['Início:'], errors='coerce')
+    else:
+        df_th = pd.DataFrame()
+    criticos = []
+    hoje = pd.Timestamp.now().normalize()
+    anos10 = timedelta(days=365.25*10)
+    anos85 = timedelta(days=365.25*8.5)
+    for idx, row in df_tipo_filt.iterrows():
+        critico = None
+        chave = row['chave_item']
+        etapa = row['etapa']
+        status_th = str(row.get('status_th', '')).lower()
+        data_th = pd.to_datetime(row.get('data_th'), errors='coerce')
+        data_inicio = pd.to_datetime(row.get('data_inicio'), errors='coerce')
+        ref = data_th if not pd.isnull(data_th) else data_inicio
+        if etapa == 'Orçamento' and 'sim' in status_th:
+            th_feito = False
+            recarga = df_tipo_filt[(df_tipo_filt['chave_item'] == chave) & (df_tipo_filt['etapa'] == 'Recarga')]
+            th_row = df_th[df_th['chave_item'] == chave] if not df_th.empty else pd.DataFrame()
+            if (recarga.empty or recarga['status_th'].str.lower().str.contains('não').any()) and th_row.empty:
+                critico = 'TH não realizado'
+        if etapa == 'Recarga':
+            if ref is not None and not pd.isnull(ref):
+                vencimento = hoje - ref
+                if vencimento > anos10:
+                    critico = 'TH vencido'
+                elif vencimento > anos85:
+                    critico = 'TH quase vencido'
+        if critico:
+            criticos.append({
+                **row,
+                "tipo_critico": critico,
+                "dias_vencido": (hoje - ref).days if etapa == 'Recarga' else None
+            })
+    df_criticos = pd.DataFrame(criticos)
+
+    # --- Filtro dos tipos de críticos ---
+    st.markdown("#### Filtros de Críticos / Riscos (Drill-down)")
+    tipos_criticos = df_criticos['tipo_critico'].unique() if not df_criticos.empty else []
+    filtro_critico = st.multiselect(
+        "Filtrar apenas por tipo de crítico (opcional):",
+        tipos_criticos, default=list(tipos_criticos)
+    ) if len(tipos_criticos) > 0 else []
+    if filtro_critico:
+        df_criticos = df_criticos[df_criticos['tipo_critico'].isin(filtro_critico)]
+
+    # CARD DE % CRÍTICOS e ALERTA
+    orcados = len(set(df_tipo_filt[df_tipo_filt['etapa'] == 'Orçamento']['chave_item']))
+    pct_criticos = (len(df_criticos) / orcados) * 100 if orcados > 0 else 0
+    k6, k7 = st.columns([2,3])
+    k6.metric("% de Críticos", f"{pct_criticos:.1f}%")
+    if not df_criticos.empty:
+        vencendo = df_criticos[df_criticos['tipo_critico'].str.contains('quase', case=False, na=False)]
+        if not vencendo.empty:
+            n_criticos = len(vencendo)
+            dias_min = vencendo['dias_vencido'].min() if 'dias_vencido' in vencendo else None
+            k7.warning(f"⚠️ {n_criticos} itens vão vencer TH em até 1,5 anos! Mais próximo: {dias_min} dias", icon="⚠️")
+
+    # --- Drill-down: tabela detalhada de críticos ---
+    st.markdown("### Tabela Detalhada de Críticos/TH (Drill-down e Exportação)")
+    if not df_criticos.empty:
+        st.dataframe(df_criticos, use_container_width=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.download_button(
+                "Baixar críticos (CSV)", data=df_criticos.to_csv(index=False),
+                file_name=f"{painel_idx.lower()}_criticos.csv", mime="text/csv"
+            )
+        with col2:
+            st.download_button(
+                "Baixar críticos (Excel)", data=to_excel(df_criticos),
+                file_name=f"{painel_idx.lower()}_criticos.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+    else:
+        st.info("Nenhum item crítico detectado com esse filtro.")
+
+    # --- Download da tabela principal filtrada ---
+    st.download_button(
+        label=f"Baixar todos os dados filtrados ({painel_idx}) - CSV",
+        data=df_tipo_filt.to_csv(index=False),
+        file_name=f"{painel_idx.lower()}_filtrado.csv",
+        mime="text/csv"
+    )
+    st.download_button(
+        label=f"Baixar todos os dados filtrados ({painel_idx}) - Excel",
+        data=to_excel(df_tipo_filt),
+        file_name=f"{painel_idx.lower()}_filtrado.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    # --- KPIs e FUNIL com filtros aplicados ---
     etapas_kpi = ['Orçamento', 'Recarga', 'Finalização']
     kpi_counts = {}
     for etapa_ in etapas_kpi:
@@ -235,6 +337,20 @@ if arquivo:
         chaves_cruzadas = chaves_etapa & chaves_cliente
         funil_counts[etapa_] = len(chaves_cruzadas)
     funil_plot = pd.DataFrame({'Etapa': etapas_funil, 'Qtd': [funil_counts[e] for e in etapas_funil]})
+
+    # Funil: Exportação (Excel e CSV)
+    st.download_button(
+        label=f"Baixar funil (CSV)",
+        data=funil_plot.to_csv(index=False),
+        file_name=f"{painel_idx.lower()}_funil.csv",
+        mime="text/csv"
+    )
+    st.download_button(
+        label=f"Baixar funil (Excel)",
+        data=to_excel(funil_plot),
+        file_name=f"{painel_idx.lower()}_funil.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
     fig_funil = px.bar(funil_plot, x='Etapa', y='Qtd', text_auto=True, color='Etapa', title='Funil do Processo - Itens Únicos')
     st.plotly_chart(fig_funil, use_container_width=True)
@@ -268,93 +384,25 @@ if arquivo:
     else:
         st.info("Não há fluxo suficiente entre etapas para gerar o Sankey.")
 
-    # --- CRÍTICOS (mapa de risco) e TH --- #
-    st.markdown("### Itens Críticos / Risco (TH)")
-    # 1. Carrega aba de TH se existir
-    aba_th = "th_A"
-    if aba_th in xl.sheet_names:
-        df_th = xl.parse(aba_th)
-        df_th['nota_fiscal'] = df_th['Número da Nota Fiscal'].apply(padroniza_chave)
-        df_th['numero_serie'] = df_th['Número de Série'].apply(padroniza_chave)
-        df_th['chave_item'] = df_th.apply(lambda row: monta_chave(row, chave_selecionada), axis=1)
-        df_th['data_inicio'] = pd.to_datetime(df_th['Início:'], errors='coerce')
-    else:
-        df_th = pd.DataFrame()
-    criticos = []
-    hoje = pd.Timestamp.now().normalize()
-    anos10 = timedelta(days=365.25*10)
-    anos85 = timedelta(days=365.25*8.5)
-    for idx, row in df_tipo_filt.iterrows():
-        critico = None
-        chave = row['chave_item']
-        etapa = row['etapa']
-        status_th = str(row.get('status_th', '')).lower()
-        data_th = pd.to_datetime(row.get('data_th'), errors='coerce')
-        data_inicio = pd.to_datetime(row.get('data_inicio'), errors='coerce')
-        # Orçamento: necessário TH mas não tem recarga nem TH associado
-        if etapa == 'Orçamento' and 'sim' in status_th:
-            th_feito = False
-            recarga = df_tipo_filt[(df_tipo_filt['chave_item'] == chave) & (df_tipo_filt['etapa'] == 'Recarga')]
-            th_row = df_th[df_th['chave_item'] == chave] if not df_th.empty else pd.DataFrame()
-            if (recarga.empty or recarga['status_th'].str.lower().str.contains('não').any()) and th_row.empty:
-                critico = 'TH não realizado'
-        # Recarga: verifica data do TH
-        if etapa == 'Recarga':
-            ref = data_th if not pd.isnull(data_th) else data_inicio
-            if ref is not None and not pd.isnull(ref):
-                vencimento = hoje - ref
-                if vencimento > anos10:
-                    critico = 'TH vencido'
-                elif vencimento > anos85:
-                    critico = 'TH quase vencido'
-        if critico:
-            criticos.append({
-                **row,
-                "tipo_critico": critico,
-                "dias_vencido": (hoje - ref).days if etapa == 'Recarga' else None
-            })
-    df_criticos = pd.DataFrame(criticos)
-    if not df_criticos.empty:
-        st.dataframe(df_criticos, use_container_width=True)
-        st.download_button(
-            label="Baixar lista de críticos (Excel/CSV)",
-            data=df_criticos.to_csv(index=False),
-            file_name=f"{painel_idx.lower()}_itens_criticos.csv",
-            mime="text/csv"
-        )
-        # Timeline dos críticos
-        st.markdown("#### Timeline dos Itens Críticos (TH)")
-        df_criticos['data_ref'] = df_criticos['data_th'].combine_first(df_criticos['data_inicio'])
-        fig_crit_timeline = px.histogram(
-            df_criticos, x='data_ref', color='tipo_critico', title="Evolução dos Críticos no Tempo (TH)",
-            nbins=25, labels={'data_ref': 'Data Referência'}, opacity=0.85
-        )
-        st.plotly_chart(fig_crit_timeline, use_container_width=True)
-        # Ranking
-        st.markdown("#### Ranking de Clientes com mais Itens Críticos")
-        if 'cliente' in df_criticos.columns and not df_criticos['cliente'].isna().all():
-            rank = df_criticos['cliente'].value_counts().reset_index()
-            rank.columns = ['Cliente', 'Qtd Críticos']
-            fig_rank = px.bar(rank.head(10), x='Cliente', y='Qtd Críticos', title='Top 10 Clientes Críticos', text_auto=True)
-            st.plotly_chart(fig_rank, use_container_width=True)
-        else:
-            st.info("Não há clientes críticos identificados nesse filtro.")
-    else:
-        st.info("Nenhum item crítico de TH detectado nos filtros atuais.")
-
     # --- TOP CLIENTES ---
     st.markdown("### Top 10 Clientes")
     if 'cliente' in df_tipo_filt.columns and not df_tipo_filt['cliente'].isna().all():
-        top_cli = df_tipo_filt['cliente'].value_counts().reset_index()
+        top_cli = df_tipo_filt[df_tipo_filt['cliente'].notna() & (df_tipo_filt['cliente'] != '')]['cliente'].value_counts().head(10).reset_index()
         top_cli.columns = ['Cliente', 'Qtd']
         if not top_cli.empty:
             st.download_button(
                 label="Baixar top 10 clientes (Excel/CSV)",
-                data=top_cli.head(10).to_csv(index=False),
+                data=top_cli.to_csv(index=False),
                 file_name=f"{painel_idx.lower()}_top_clientes.csv",
                 mime="text/csv"
             )
-            fig_cli = px.bar(top_cli.head(10), x="Cliente", y="Qtd", title="Top 10 Clientes", text_auto=True)
+            st.download_button(
+                label="Baixar top 10 clientes (Excel)",
+                data=to_excel(top_cli),
+                file_name=f"{painel_idx.lower()}_top_clientes.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            fig_cli = px.bar(top_cli, x="Cliente", y="Qtd", title="Top 10 Clientes", text_auto=True)
             st.plotly_chart(fig_cli, use_container_width=True)
         else:
             st.info("Sem dados de cliente para exibir.")
@@ -374,6 +422,12 @@ if arquivo:
                 file_name=f"{painel_idx.lower()}_laudos.csv",
                 mime="text/csv"
             )
+            st.download_button(
+                label="Baixar laudos (Excel)",
+                data=to_excel(laudo_agrupado),
+                file_name=f"{painel_idx.lower()}_laudos.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
             fig_laudo = px.pie(laudo_agrupado, names="Laudo", values="Qtd", title="Laudos Técnicos (Top 7 + Outros)")
             st.plotly_chart(fig_laudo, use_container_width=True)
         else:
@@ -390,6 +444,12 @@ if arquivo:
                 data=df_tipo_filt[['data_inicio', 'etapa']].dropna().to_csv(index=False),
                 file_name=f"{painel_idx.lower()}_datas_inicio.csv",
                 mime="text/csv"
+            )
+            st.download_button(
+                label="Baixar datas de início (Excel)",
+                data=to_excel(df_tipo_filt[['data_inicio', 'etapa']].dropna()),
+                file_name=f"{painel_idx.lower()}_datas_inicio.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             fig_time = px.histogram(df_tipo_filt, x='data_inicio', color="etapa", title="Evolução dos Eventos (Data de Início)")
             st.plotly_chart(fig_time, use_container_width=True)
@@ -408,6 +468,12 @@ if arquivo:
                 data=duplicados.to_csv(index=False),
                 file_name=f"{painel_idx.lower()}_duplicados.csv",
                 mime="text/csv"
+            )
+            st.download_button(
+                label="Baixar duplicados (Excel)",
+                data=to_excel(duplicados),
+                file_name=f"{painel_idx.lower()}_duplicados.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             st.dataframe(duplicados, use_container_width=True)
         else:
