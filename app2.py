@@ -441,4 +441,4 @@ if arquivo:
 else:
     st.info("Faça upload do Excel para explorar o BI completo!")
 
-st.markdown('<div class="footer">BI Ampolas & Tanques • Profissional • Powered by OpenAI</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">BI Ampolas & Tanques • Profissional • Powered by Rennan Miranda</div>', unsafe_allow_html=True)
