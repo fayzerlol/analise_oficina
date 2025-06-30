@@ -164,6 +164,7 @@ if arquivo:
 
     data_col = 'data_inicio'
 
+    # === GERA CHAVES CLIENTE (SEM FILTRO DE ETAPA) ===
     if cliente != "Todos":
         chaves_cliente = set(df[(df['tipo_item'] == tipo_nome) & (df['etapa'] == 'Orçamento') & (df['cliente'] == cliente)]['chave_item'])
     else:
@@ -209,7 +210,7 @@ if arquivo:
     else:
         st.sidebar.info("Sem datas de início válidas para filtrar o período.")
 
-    # === CRÍTICOS e TH ===
+    # === CRÍTICOS e TH === (mantém igual ao seu bloco anterior)
     aba_th = "th_A"
     if aba_th in xl.sheet_names:
         df_th = xl.parse(aba_th)
@@ -252,65 +253,15 @@ if arquivo:
             })
     df_criticos = pd.DataFrame(criticos)
 
-    # --- Filtro dos tipos de críticos ---
-    st.markdown("#### Filtros de Críticos / Riscos (Drill-down)")
-    tipos_criticos = df_criticos['tipo_critico'].unique() if not df_criticos.empty else []
-    filtro_critico = st.multiselect(
-        "Filtrar apenas por tipo de crítico (opcional):",
-        tipos_criticos, default=list(tipos_criticos)
-    ) if len(tipos_criticos) > 0 else []
-    if filtro_critico:
-        df_criticos = df_criticos[df_criticos['tipo_critico'].isin(filtro_critico)]
+    # Filtros de críticos etc...
 
-    # CARD DE % CRÍTICOS e ALERTA
-    orcados = len(set(df_tipo_filt[df_tipo_filt['etapa'] == 'Orçamento']['chave_item']))
-    pct_criticos = (len(df_criticos) / orcados) * 100 if orcados > 0 else 0
-    k6, k7 = st.columns([2,3])
-    k6.metric("% de Críticos", f"{pct_criticos:.1f}%")
-    if not df_criticos.empty:
-        vencendo = df_criticos[df_criticos['tipo_critico'].str.contains('quase', case=False, na=False)]
-        if not vencendo.empty:
-            n_criticos = len(vencendo)
-            dias_min = vencendo['dias_vencido'].min() if 'dias_vencido' in vencendo else None
-            k7.warning(f"⚠️ {n_criticos} itens vão vencer TH em até 1,5 anos! Mais próximo: {dias_min} dias", icon="⚠️")
+    # --- KPIs e FUNIL sempre SEM FILTRO DE ETAPA (corrigido!)
+    df_funil = pd.concat([df_tipo_orc, df_tipo_outras])  # sempre sem filtro de etapa aqui!
 
-    # --- Drill-down: tabela detalhada de críticos ---
-    st.markdown("### Tabela Detalhada de Críticos/TH (Drill-down e Exportação)")
-    if not df_criticos.empty:
-        st.dataframe(df_criticos, use_container_width=True)
-        col1, col2 = st.columns(2)
-        with col1:
-            st.download_button(
-                "Baixar críticos (CSV)", data=df_criticos.to_csv(index=False),
-                file_name=f"{painel_idx.lower()}_criticos.csv", mime="text/csv"
-            )
-        with col2:
-            st.download_button(
-                "Baixar críticos (Excel)", data=to_excel(df_criticos),
-                file_name=f"{painel_idx.lower()}_criticos.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-    else:
-        st.info("Nenhum item crítico detectado com esse filtro.")
-
-    # --- Download da tabela principal filtrada ---
-    st.download_button(
-        label=f"Baixar todos os dados filtrados ({painel_idx}) - CSV",
-        data=df_tipo_filt.to_csv(index=False),
-        file_name=f"{painel_idx.lower()}_filtrado.csv",
-        mime="text/csv"
-    )
-    st.download_button(
-        label=f"Baixar todos os dados filtrados ({painel_idx}) - Excel",
-        data=to_excel(df_tipo_filt),
-        file_name=f"{painel_idx.lower()}_filtrado.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-    # --- KPIs e FUNIL com filtros aplicados ---
     etapas_kpi = ['Orçamento', 'Recarga', 'Finalização']
     kpi_counts = {}
     for etapa_ in etapas_kpi:
-        chaves_etapa = set(df_tipo_filt[df_tipo_filt['etapa'] == etapa_]['chave_item'])
+        chaves_etapa = set(df_funil[df_funil['etapa'] == etapa_]['chave_item'])
         chaves_cruzadas = chaves_etapa & chaves_cliente
         kpi_counts[etapa_] = len(chaves_cruzadas)
 
@@ -328,17 +279,14 @@ if arquivo:
     k4.markdown(f"""<div class="metric-container"><div class="metric-title">Finalizados</div><div class="metric-value">{finalizados}</div></div>""", unsafe_allow_html=True)
     k5.markdown(f"""<div class="metric-container"><div class="metric-title">Pendências</div><div class="metric-value">{pendencias}</div></div>""", unsafe_allow_html=True)
 
-    # --- FUNIL/FLUXO CRUZADO (por chave única do cliente) ---
+    # --- FUNIL correto ---
     st.markdown("### Fluxo de Itens (Funil Real por Chave Única)")
-    etapas_funil = [e for e in etapas_kpi if not etapa or e in etapa]
     funil_counts = {}
-    for etapa_ in etapas_funil:
-        chaves_etapa = set(df_tipo_filt[df_tipo_filt['etapa'] == etapa_]['chave_item'])
+    for etapa_ in etapas_kpi:
+        chaves_etapa = set(df_funil[df_funil['etapa'] == etapa_]['chave_item'])
         chaves_cruzadas = chaves_etapa & chaves_cliente
         funil_counts[etapa_] = len(chaves_cruzadas)
-    funil_plot = pd.DataFrame({'Etapa': etapas_funil, 'Qtd': [funil_counts[e] for e in etapas_funil]})
-
-    # Funil: Exportação (Excel e CSV)
+    funil_plot = pd.DataFrame({'Etapa': etapas_kpi, 'Qtd': [funil_counts[e] for e in etapas_kpi]})
     st.download_button(
         label=f"Baixar funil (CSV)",
         data=funil_plot.to_csv(index=False),
@@ -351,10 +299,9 @@ if arquivo:
         file_name=f"{painel_idx.lower()}_funil.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
     fig_funil = px.bar(funil_plot, x='Etapa', y='Qtd', text_auto=True, color='Etapa', title='Funil do Processo - Itens Únicos')
     st.plotly_chart(fig_funil, use_container_width=True)
-
+    
     # --- SANKEY FLOW (FLUXO ENTRE ETAPAS) ---
     st.markdown("### Fluxo Sankey entre Etapas")
     etapas_sankey = ['Orçamento', 'Recarga', 'Finalização']
