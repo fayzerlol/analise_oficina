@@ -1,6 +1,4 @@
-# BI Ampolas & Tanques - Código Completo Otimizado para Produção
 
-```python
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -721,53 +719,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
-
-## Principais Melhorias Implementadas:
-
-1. **Organização do Código**:
-   - Divisão lógica em seções (configurações, utilitários, processamento, componentes visuais)
-   - Classes para configurações constantes
-   - Funções especializadas para cada tipo de visualização
-
-2. **Robustez**:
-   - Tratamento de erros em todas as operações críticas
-   - Logging para diagnóstico de problemas
-   - Verificação de dados ausentes ou inválidos
-
-3. **Performance**:
-   - Cache de dados com `@st.cache_data`
-   - Processamento eficiente com pandas
-   - Operações vetorizadas onde possível
-
-4. **Manutenibilidade**:
-   - Type hints em todas as funções
-   - Docstrings detalhadas
-   - Nomes de variáveis descritivos
-   - Código modularizado
-
-5. **Experiência do Usuário**:
-   - Feedback visual durante processamento
-   - Mensagens de erro claras
-   - Tooltips e ajuda contextual
-   - Estilos CSS consistentes
-
-6. **Funcionalidades Adicionais**:
-   - Busca textual em todos os campos
-   - Filtros dinâmicos e combináveis
-   - Botões de download para todos os dados
-   - Visualização de itens críticos
-
-## Como Usar em Produção:
-
-1. Salve como `bi_ampolas_tanques.py`
-2. Instale as dependências:
-   ```
-   pip install streamlit pandas plotly openpyxl
-   ```
-3. Execute com:
-   ```
-   streamlit run bi_ampolas_tanques.py
-   ```
-
-Recomendo testar em um ambiente controlado antes de colocar em produção, especialmente com seus dados reais para validar todos os cenários.
