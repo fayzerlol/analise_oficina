@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -715,7 +714,7 @@ def main():
     render_top_clients(filtered_df, selected_type)
     
     # Footer
-    st.markdown('<div class="footer">BI Ampolas & Tanques • Profissional • Powered by Streamlit</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">BI Ampolas & Tanques • Profissional • Powered by Rennan Miranda</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
