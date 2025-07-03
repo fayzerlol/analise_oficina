@@ -522,7 +522,7 @@ def main():
     
     if not uploaded_file:
         st.info("Faça upload do arquivo Excel para iniciar a análise.")
-        st.markdown('<div class="footer">BI Ampolas & Tanques • Profissional • Powered by Streamlit</div>', unsafe_allow_html=True)
+        st.markdown('<div class="footer">BI Ampolas & Tanques • Profissional • Powered by Rennan Miranda</div>', unsafe_allow_html=True)
         return
     
     # Sidebar - Configurações
