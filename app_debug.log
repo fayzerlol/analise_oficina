@@ -1,0 +1,268 @@
+2025-07-03 04:00:01,482 - __main__ - INFO - Iniciando processamento do arquivo...
+2025-07-03 04:00:01,872 - __main__ - INFO - Coluna Capacidade: não encontrada na aba orc_A
+2025-07-03 04:00:02,826 - __main__ - INFO - Coluna  não encontrada na aba rec_A
+2025-07-03 04:00:02,852 - __main__ - INFO - Coluna Capacidade: não encontrada na aba rec_A
+2025-07-03 04:00:03,669 - __main__ - INFO - Coluna  não encontrada na aba fin_A
+2025-07-03 04:00:03,673 - __main__ - INFO - Coluna  não encontrada na aba fin_A
+2025-07-03 04:00:03,673 - __main__ - INFO - Coluna  não encontrada na aba fin_A
+2025-07-03 04:00:03,684 - __main__ - INFO - Coluna Capacidade: não encontrada na aba fin_A
+2025-07-03 04:00:04,076 - __main__ - INFO - Coluna Capacidade: não encontrada na aba orc_T_P
+2025-07-03 04:00:04,163 - __main__ - INFO - Coluna  não encontrada na aba rec_T_P
+2025-07-03 04:00:04,167 - __main__ - INFO - Coluna Capacidade: não encontrada na aba rec_T_P
+2025-07-03 04:00:04,273 - __main__ - INFO - Coluna  não encontrada na aba fin_T_P
+2025-07-03 04:00:04,275 - __main__ - INFO - Coluna  não encontrada na aba fin_T_P
+2025-07-03 04:00:04,275 - __main__ - INFO - Coluna  não encontrada na aba fin_T_P
+2025-07-03 04:00:04,277 - __main__ - INFO - Coluna Capacidade: não encontrada na aba fin_T_P
+2025-07-03 04:00:04,497 - __main__ - INFO - Coluna Capacidade: não encontrada na aba orc_T_S
+2025-07-03 04:00:05,252 - __main__ - INFO - Coluna  não encontrada na aba rec_T_S
+2025-07-03 04:00:05,266 - __main__ - INFO - Coluna Capacidade: não encontrada na aba rec_T_S
+2025-07-03 04:00:05,874 - __main__ - WARNING - Coluna Data do Teste não encontrada na aba TH
+2025-07-03 04:00:05,923 - __main__ - INFO - Processamento concluído em 4.44 segundos
+2025-07-03 04:00:05,924 - __main__ - INFO - Total de registros processados: 6468
+2025-07-03 04:00:05,925 - __main__ - INFO - Total de abas processadas: 8
+2025-07-03 04:00:13,749 - __main__ - ERROR - Erro ao renderizar funil: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 752, in render_funnel_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+2025-07-03 04:00:13,781 - __main__ - ERROR - Erro ao renderizar linha do tempo: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 807, in render_timeline_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+2025-07-03 04:00:13,784 - __main__ - ERROR - Erro ao renderizar top clientes: 'cliente_grouped'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 887, in render_top_clients
+    .groupby('cliente_grouped')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/frame.py", line 9190, in groupby
+    return DataFrameGroupBy(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/groupby/groupby.py", line 1329, in __init__
+    grouper, exclusions, obj = get_grouper(
+                               ^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/groupby/grouper.py", line 1043, in get_grouper
+    raise KeyError(gpr)
+KeyError: 'cliente_grouped'
+2025-07-03 04:00:13,833 - __main__ - ERROR - Erro ao renderizar funil: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 752, in render_funnel_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+2025-07-03 04:00:13,864 - __main__ - ERROR - Erro ao renderizar linha do tempo: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 807, in render_timeline_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+2025-07-03 04:00:13,915 - __main__ - ERROR - Erro ao renderizar top clientes: No module named 'xlsxwriter'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 934, in render_top_clients
+    data=to_excel(top_clients),
+         ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/analise_oficina/app4.py", line 490, in to_excel
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/io/excel/_xlsxwriter.py", line 197, in __init__
+    from xlsxwriter import Workbook
+ModuleNotFoundError: No module named 'xlsxwriter'
+2025-07-03 04:00:13,961 - __main__ - ERROR - Erro ao renderizar funil: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 752, in render_funnel_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+2025-07-03 04:00:13,995 - __main__ - ERROR - Erro ao renderizar linha do tempo: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 807, in render_timeline_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+2025-07-03 04:00:14,041 - __main__ - ERROR - Erro ao renderizar top clientes: No module named 'xlsxwriter'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 934, in render_top_clients
+    data=to_excel(top_clients),
+         ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/analise_oficina/app4.py", line 490, in to_excel
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/io/excel/_xlsxwriter.py", line 197, in __init__
+    from xlsxwriter import Workbook
+ModuleNotFoundError: No module named 'xlsxwriter'
+2025-07-03 04:00:31,891 - __main__ - ERROR - Erro ao renderizar funil: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 752, in render_funnel_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+2025-07-03 04:00:31,941 - __main__ - ERROR - Erro ao renderizar linha do tempo: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 807, in render_timeline_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+2025-07-03 04:00:31,945 - __main__ - ERROR - Erro ao renderizar top clientes: 'cliente_grouped'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 887, in render_top_clients
+    .groupby('cliente_grouped')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/frame.py", line 9190, in groupby
+    return DataFrameGroupBy(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/groupby/groupby.py", line 1329, in __init__
+    grouper, exclusions, obj = get_grouper(
+                               ^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/groupby/grouper.py", line 1043, in get_grouper
+    raise KeyError(gpr)
+KeyError: 'cliente_grouped'
+2025-07-03 04:00:31,988 - __main__ - ERROR - Erro ao renderizar funil: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 752, in render_funnel_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+2025-07-03 04:00:32,020 - __main__ - ERROR - Erro ao renderizar linha do tempo: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 807, in render_timeline_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+2025-07-03 04:00:32,062 - __main__ - ERROR - Erro ao renderizar top clientes: No module named 'xlsxwriter'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 934, in render_top_clients
+    data=to_excel(top_clients),
+         ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/analise_oficina/app4.py", line 490, in to_excel
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/io/excel/_xlsxwriter.py", line 197, in __init__
+    from xlsxwriter import Workbook
+ModuleNotFoundError: No module named 'xlsxwriter'
+2025-07-03 04:00:32,103 - __main__ - ERROR - Erro ao renderizar funil: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 752, in render_funnel_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+2025-07-03 04:00:32,132 - __main__ - ERROR - Erro ao renderizar linha do tempo: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 807, in render_timeline_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+2025-07-03 04:00:32,177 - __main__ - ERROR - Erro ao renderizar top clientes: No module named 'xlsxwriter'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 934, in render_top_clients
+    data=to_excel(top_clients),
+         ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/analise_oficina/app4.py", line 490, in to_excel
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/io/excel/_xlsxwriter.py", line 197, in __init__
+    from xlsxwriter import Workbook
+ModuleNotFoundError: No module named 'xlsxwriter'
+2025-07-03 04:01:24,660 - __main__ - ERROR - Erro ao renderizar funil: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 752, in render_funnel_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+2025-07-03 04:01:24,697 - __main__ - ERROR - Erro ao renderizar linha do tempo: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 807, in render_timeline_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+2025-07-03 04:01:24,701 - __main__ - ERROR - Erro ao renderizar top clientes: 'cliente_grouped'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 887, in render_top_clients
+    .groupby('cliente_grouped')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/frame.py", line 9190, in groupby
+    return DataFrameGroupBy(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/groupby/groupby.py", line 1329, in __init__
+    grouper, exclusions, obj = get_grouper(
+                               ^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/groupby/grouper.py", line 1043, in get_grouper
+    raise KeyError(gpr)
+KeyError: 'cliente_grouped'
+2025-07-03 04:02:19,196 - __main__ - INFO - Iniciando processamento do arquivo...
+2025-07-03 04:02:19,549 - __main__ - INFO - Coluna Capacidade: não encontrada na aba orc_A
+2025-07-03 04:02:20,421 - __main__ - INFO - Coluna  não encontrada na aba rec_A
+2025-07-03 04:02:20,469 - __main__ - INFO - Coluna Capacidade: não encontrada na aba rec_A
+2025-07-03 04:02:21,319 - __main__ - INFO - Coluna  não encontrada na aba fin_A
+2025-07-03 04:02:21,323 - __main__ - INFO - Coluna  não encontrada na aba fin_A
+2025-07-03 04:02:21,323 - __main__ - INFO - Coluna  não encontrada na aba fin_A
+2025-07-03 04:02:21,334 - __main__ - INFO - Coluna Capacidade: não encontrada na aba fin_A
+2025-07-03 04:02:21,757 - __main__ - INFO - Coluna Capacidade: não encontrada na aba orc_T_P
+2025-07-03 04:02:21,843 - __main__ - INFO - Coluna  não encontrada na aba rec_T_P
+2025-07-03 04:02:21,847 - __main__ - INFO - Coluna Capacidade: não encontrada na aba rec_T_P
+2025-07-03 04:02:21,936 - __main__ - INFO - Coluna  não encontrada na aba fin_T_P
+2025-07-03 04:02:21,937 - __main__ - INFO - Coluna  não encontrada na aba fin_T_P
+2025-07-03 04:02:21,937 - __main__ - INFO - Coluna  não encontrada na aba fin_T_P
+2025-07-03 04:02:21,939 - __main__ - INFO - Coluna Capacidade: não encontrada na aba fin_T_P
+2025-07-03 04:02:22,161 - __main__ - INFO - Coluna Capacidade: não encontrada na aba orc_T_S
+2025-07-03 04:02:22,601 - __main__ - INFO - Coluna  não encontrada na aba rec_T_S
+2025-07-03 04:02:22,614 - __main__ - INFO - Coluna Capacidade: não encontrada na aba rec_T_S
+2025-07-03 04:02:22,988 - __main__ - WARNING - Coluna Data do Teste não encontrada na aba TH
+2025-07-03 04:02:23,016 - __main__ - INFO - Processamento concluído em 3.82 segundos
+2025-07-03 04:02:23,016 - __main__ - INFO - Total de registros processados: 6468
+2025-07-03 04:02:23,016 - __main__ - INFO - Total de abas processadas: 8
+2025-07-03 04:02:30,669 - __main__ - ERROR - Erro ao renderizar funil: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 752, in render_funnel_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+2025-07-03 04:02:30,704 - __main__ - ERROR - Erro ao renderizar linha do tempo: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 807, in render_timeline_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+2025-07-03 04:02:30,707 - __main__ - ERROR - Erro ao renderizar top clientes: 'cliente_grouped'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 887, in render_top_clients
+    .groupby('cliente_grouped')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/frame.py", line 9190, in groupby
+    return DataFrameGroupBy(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/groupby/groupby.py", line 1329, in __init__
+    grouper, exclusions, obj = get_grouper(
+                               ^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/groupby/grouper.py", line 1043, in get_grouper
+    raise KeyError(gpr)
+KeyError: 'cliente_grouped'
+2025-07-03 04:02:30,751 - __main__ - ERROR - Erro ao renderizar funil: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 752, in render_funnel_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+2025-07-03 04:02:30,797 - __main__ - ERROR - Erro ao renderizar linha do tempo: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 807, in render_timeline_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+2025-07-03 04:02:30,927 - __main__ - ERROR - Erro ao renderizar funil: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 752, in render_funnel_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+2025-07-03 04:02:30,962 - __main__ - ERROR - Erro ao renderizar linha do tempo: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 807, in render_timeline_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+2025-07-03 04:02:58,766 - __main__ - ERROR - Erro ao renderizar funil: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 752, in render_funnel_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hoverlabel'
+2025-07-03 04:02:58,798 - __main__ - ERROR - Erro ao renderizar linha do tempo: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 807, in render_timeline_chart
+    fig.update_layout(
+TypeError: plotly.graph_objs._figure.Figure.update_layout() got multiple values for keyword argument 'hovermode'
+2025-07-03 04:02:58,802 - __main__ - ERROR - Erro ao renderizar top clientes: 'cliente_grouped'
+Traceback (most recent call last):
+  File "/workspaces/analise_oficina/app4.py", line 887, in render_top_clients
+    .groupby('cliente_grouped')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/frame.py", line 9190, in groupby
+    return DataFrameGroupBy(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/groupby/groupby.py", line 1329, in __init__
+    grouper, exclusions, obj = get_grouper(
+                               ^^^^^^^^^^^^
+  File "/home/vscode/.local/lib/python3.11/site-packages/pandas/core/groupby/grouper.py", line 1043, in get_grouper
+    raise KeyError(gpr)
+KeyError: 'cliente_grouped'
