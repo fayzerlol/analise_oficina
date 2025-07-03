@@ -115,6 +115,7 @@ if arquivo:
                   'data_th': 'Data Fabricação / Teste Hidrostático', 'data_inicio': 'Início:'}},
     ]
 
+    esperadas = [m['aba'] for m in mapeamento]
     for meta in mapeamento:
         aba = meta['aba']
         if aba in xl.sheet_names:
@@ -123,7 +124,15 @@ if arquivo:
             df['tipo_item'] = meta['tipo_item']
             df['etapa'] = meta['etapa']
             frames.append(df[['nota_fiscal', 'numero_serie', 'numero_lacre', 'cliente', 'laudo_tecnico', 'status_th', 'data_th', 'data_inicio', 'tipo_item', 'etapa']])
-    df = pd.concat(frames, ignore_index=True)
+
+    if frames:
+        df = pd.concat(frames, ignore_index=True)
+    else:
+        st.error(
+            "Nenhuma das abas esperadas foi encontrada: "
+            + ", ".join(esperadas)
+        )
+        st.stop()
 
     st.sidebar.markdown(
         "Escolha quais campos formam a chave única para rastrear cada item no funil. "
